@@ -46,11 +46,15 @@
         if (cruiser) { cruiser.car.x = 1520 + (i - 1) * 90; cruiser.car.y = 1180 + 190 + i * 60; cruiser.car.angle = -Math.PI / 2; cruiser.car.speed = 170; cruiser.x = cruiser.car.x; cruiser.y = cruiser.car.y; }
       }
     } else if (name === 'mission') {
-      // Pier mission moment: rivals ahead, gun drawn, marker up.
+      // Pier mission moment: the player pushes onto the pier with the
+      // crew in sight - posed west of the pier so the camera (clamped
+      // at the world edge) frames the player AND the crew together.
       if (!G.rivals || G.rivals.length === 0) CB.spawnRivals(G);
-      p.x = 2900; p.y = 1010; p.onFoot = true; p.car = null;
-      p.aimAngle = 0.5; p.angle = 0.5;
-      G.mouse.wx = p.x + 260; G.mouse.wy = p.y + 130;
+      p.x = 2640; p.y = 1005; p.onFoot = true; p.car = null;
+      p.aimAngle = 0.12; p.angle = 0.12;
+      G.mouse.wx = p.x + 300; G.mouse.wy = p.y + 36;
+      if (G.rivals[0]) { G.rivals[0].x = 2845; G.rivals[0].y = 955; }
+      if (G.rivals[1]) { G.rivals[1].x = 2805; G.rivals[1].y = 1065; }
       CB.Missions.start(G, 3);
       G.cash = 2150;
     }

@@ -174,7 +174,7 @@
       ctx.globalAlpha = Math.max(0, alpha);
       ctx.font = 'bold 14px system-ui, sans-serif';
       var tw = Math.min(430, ctx.measureText(t.text).width + 28);
-      var tx = CFG.VIEW_W - tw - 14, ty = CFG.VIEW_H - 200 - i * 40;
+      var tx = CFG.VIEW_W - tw - 14, ty = CFG.VIEW_H - 222 - i * 40;
       ctx.fillStyle = 'rgba(16,14,22,0.85)';
       roundRect(ctx, tx, ty, tw, 32, 8); ctx.fill();
       ctx.fillStyle = '#ffd23e'; ctx.textAlign = 'left';

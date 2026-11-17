@@ -1,79 +1,66 @@
-// The screenshot scenes behind ?shot=start|play|end. Each one plays the real rules forward from a
-// fresh world for a fixed number of steps, steered by a simple autopilot (look ahead each way the
-// paddle could move, keep clear of blocks, chase the lowest coin when that is safe), so the frame
-// is what a short game really looks like and the same seed always gives the same frame.
-import { FIELD, PLAYER, STEP } from './config.js';
-import { EVENT_OVER, KIND_BLOCK } from './world.js';
-import { SCREEN_OVER, SCREEN_PLAY, SCREEN_TITLE } from './render.js';
+// Cielo Bay - shots.js: deterministic ?shot= scenes for screenshots.
+// Poses the real game (same actors, same systems) and raises
+// window.__shot = "ready" once the scene is on screen.
+(function () {
+  'use strict';
+  var CB = window.CB || (window.CB = {});
+  var CFG = CB.CFG;
 
-const START_SECONDS = 5;
-const PLAY_SECONDS = 26;
-const END_LIMIT_SECONDS = 600;
-/**
- * How far ahead, in seconds, the autopilot checks each way it could move: the play scene's pilot
- * looks well ahead and keeps all its lives; the end scene's looks only a moment ahead, so it is
- * caught out once the blocks speed up, as a hurried player is.
- */
-const HORIZON_PLAY = 0.7;
-const HORIZON_END = 0.25;
-const SAMPLE = 1 / 30;
-const DIRECTIONS = [0, -1, 1];
-/** Extra room, each side, it keeps between the paddle and a block. */
-const MARGIN = 10;
-
-/** Seconds until moving in `direction` (-1, 0, 1) runs the paddle into a block; Infinity when it never does. */
-function timeToHit(state, direction, horizon) {
-  const player = state.player;
-  for (let t = SAMPLE; t <= horizon; t += SAMPLE) {
-    const x = Math.min(FIELD.width - player.width, Math.max(0, player.x + direction * PLAYER.speed * t));
-    for (let index = 0; index < state.items.length; index += 1) {
-      const item = state.items[index];
-      if (!item.active || item.kind !== KIND_BLOCK) continue;
-      const y = item.y + item.speed * t;
-      if (y + item.height > player.y && y < player.y + player.height && item.x < x + player.width + MARGIN && item.x + item.width > x - MARGIN) return t;
+  function near(G, list, x, y, maxD) {
+    var best = null, bd = maxD;
+    list.forEach(function (o) { var d = Math.hypot(o.x - x, o.y - y); if (d < bd) { bd = d; best = o; } });
+    return best;
+  }
+  function poseShot(G, name) {
+    var p = G.player;
+    G.screen = 'playing';
+    G.started = true;
+    if (name === 'cover') {
+      // Downtown on foot: traffic, peds, minimap, objective banner.
+      p.x = 920; p.y = 1150; p.onFoot = true; p.car = null;
+      CB.Missions.start(G, 0);
+      var c1 = near(G, G.cars.filter(function (c) { return c.kind === 'traffic'; }), 920, 1000, 400);
+      if (c1) { c1.x = 894; c1.y = 1010; }
+      var c2 = near(G, G.cars.filter(function (c) { return c.kind === 'traffic' && c !== c1; }), 920, 1330, 400);
+      if (c2) { c2.x = 946; c2.y = 1330; }
+    } else if (name === 'drive') {
+      // Driving the beachfront road in the marked car.
+      p.x = 1250; p.y = CFG.BEACH_ROAD_Y + 26;
+      var car = G.markedCar;
+      car.x = 1250; car.y = CFG.BEACH_ROAD_Y + 26; car.angle = 0; car.speed = 235;
+      CB.enterCar(G, car);
+      CB.Missions.start(G, 0);
+      if (G.missionState) G.missionState.phase = 'deliver';
+      G.cash = 250;
+    } else if (name === 'chase') {
+      // Police pursuit at exactly 3 stars, downtown.
+      p.x = 1520; p.y = 1180;
+      var car2 = near(G, G.cars.filter(function (c) { return c.kind === 'parked' || c.kind === 'civilian'; }), 1520, 1180, 300) || G.markedCar;
+      car2.x = 1520; car2.y = 1180; car2.angle = Math.PI / 2; car2.speed = 190;
+      CB.enterCar(G, car2);
+      CB.Missions.start(G, 2);
+      CB.setWanted(G, 3);
+      G.lastKnownX = p.x; G.lastKnownY = p.y; G.lastSeenAt = G.time;
+      for (var i = 0; i < 3; i++) {
+        var cruiser = CB.spawnCruiser(G);
+        if (cruiser) { cruiser.car.x = 1520 + (i - 1) * 90; cruiser.car.y = 1180 + 190 + i * 60; cruiser.car.angle = -Math.PI / 2; cruiser.car.speed = 170; cruiser.x = cruiser.car.x; cruiser.y = cruiser.car.y; }
+      }
+    } else if (name === 'mission') {
+      // Pier mission moment: rivals ahead, gun drawn, marker up.
+      if (!G.rivals || G.rivals.length === 0) CB.spawnRivals(G);
+      p.x = 2900; p.y = 1010; p.onFoot = true; p.car = null;
+      p.aimAngle = 0.5; p.angle = 0.5;
+      G.mouse.wx = p.x + 260; G.mouse.wy = p.y + 130;
+      CB.Missions.start(G, 3);
+      G.cash = 2150;
     }
+    CB.updateCamera(G, 1);
+    // Let a few real frames render, then declare the scene ready.
+    var frames = 0;
+    var iv = setInterval(function () {
+      frames++;
+      if (frames >= 6) { clearInterval(iv); window.__shot = 'ready'; }
+    }, 90);
   }
-  return Infinity;
-}
-
-/** Of the safe ways to move, the one toward the lowest coin (or the centre); else the one that is hit last. */
-function autopilot(state, horizon) {
-  const player = state.player;
-  let coin = null;
-  for (let index = 0; index < state.items.length; index += 1) {
-    const item = state.items[index];
-    if (item.active && item.kind !== KIND_BLOCK && (coin === null || item.y > coin.y)) coin = item;
-  }
-  const target = coin === null ? FIELD.width / 2 : coin.x + coin.width / 2;
-  const centre = player.x + player.width / 2;
-  const wanted = target > centre + 8 ? 1 : target < centre - 8 ? -1 : 0;
-  let best = wanted;
-  let bestTime = timeToHit(state, wanted, horizon);
-  for (let index = 0; index < DIRECTIONS.length && bestTime !== Infinity; index += 1) {
-    const time = timeToHit(state, DIRECTIONS[index], horizon);
-    if (time > bestTime) {
-      bestTime = time;
-      best = DIRECTIONS[index];
-    }
-  }
-  return best;
-}
-
-/**
- * Set `world` to the named scene (start, play or end; any other name is start) and return the
- * screen to draw over it and the best score to show.
- */
-export function stageShot(name, world) {
-  world.reset();
-  if (name !== 'play' && name !== 'end') {
-    for (let index = 0; index < START_SECONDS / STEP; index += 1) world.step(STEP, 0, true);
-    return { screen: SCREEN_TITLE, best: 0 };
-  }
-  const limit = name === 'end' ? END_LIMIT_SECONDS : PLAY_SECONDS;
-  const horizon = name === 'end' ? HORIZON_END : HORIZON_PLAY;
-  for (let index = 0; index < limit / STEP; index += 1) {
-    if (world.step(STEP, autopilot(world.state, horizon), false) & EVENT_OVER) break;
-  }
-  const over = world.state.lives === 0;
-  return { screen: over ? SCREEN_OVER : SCREEN_PLAY, best: world.state.score };
-}
+  CB.poseShot = poseShot;
+})();

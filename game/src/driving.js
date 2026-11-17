@@ -134,25 +134,25 @@
     car.speed += Math.max(-260 * dt, Math.min(190 * dt, want - car.speed));
     car.x += Math.cos(car.angle) * car.speed * dt;
     car.y += Math.sin(car.angle) * car.speed * dt;
-    // Occasionally turn at an intersection.
+    // Occasionally turn at an intersection onto the crossing road.
     var roads = car.axis === 'x' ? CFG.ROADS_X : CFG.ROADS_Y;
     for (var r = 0; r < roads.length; r++) {
       var at = car.axis === 'x' ? car.x : car.y;
       if (Math.abs(at - roads[r]) < 4 && Math.random() < 0.0035) {
         var turnDir = Math.random() < 0.5 ? 1 : -1;
         if (car.axis === 'x') {
-          car.axis = 'y'; car.dir = turnDir; car.lane = car.x;
-          car.y = (car.axis, car.y); car.angle = turnDir > 0 ? Math.PI / 2 : -Math.PI / 2;
-          car.x = roads[r] + 0; car.y += 0;
-          // settle onto the vertical road's lane
-          car.x = roads[r] + turnDir * 26 * 0 + (turnDir > 0 ? 26 : -26) * 0 + roads[r] * 0 + car.x * 0 + (roads[r]);
-          car.x = roads[r] + (turnDir > 0 ? 26 : -26);
-          car.y = Math.round(car.y);
+          // Settle onto the vertical road's lane, keeping our y.
+          car.axis = 'y'; car.dir = turnDir;
+          car.angle = turnDir > 0 ? Math.PI / 2 : -Math.PI / 2;
+          car.x = roads[r] + turnDir * 26;
+          car.lane = car.x;
         } else {
           var rows = CFG.ROADS_Y.concat([CFG.BEACH_ROAD_Y]);
           var rowPick = rows[Math.floor(Math.random() * rows.length)];
-          car.axis = 'x'; car.dir = turnDir; car.angle = turnDir > 0 ? 0 : Math.PI;
-          car.y = rowPick + (turnDir > 0 ? 26 : -26);
+          car.axis = 'x'; car.dir = turnDir;
+          car.angle = turnDir > 0 ? 0 : Math.PI;
+          car.y = rowPick + turnDir * 26;
+          car.lane = car.y;
         }
         break;
       }

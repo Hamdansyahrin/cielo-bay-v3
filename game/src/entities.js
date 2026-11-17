@@ -80,7 +80,7 @@
   function spawnRivals(G) {
     var spots = [
       { x: 2935, y: 940 }, { x: 3010, y: 1010 }, { x: 2900, y: 1060 },
-      { x: 2980, y: 1120 }, { x: 3050, y: 920 },
+      { x: 2980, y: 1120 }, { x: 3005, y: 935 },
     ];
     G.rivals = spots.map(function (s) {
       return {
@@ -110,11 +110,13 @@
       var threat = null;
       if (G.time - G.lastCrimeAt < 2.5 && Math.hypot(p.x - ped.x, p.y - ped.y) < 320) threat = p;
       if (!threat && p.car && Math.abs(p.car.speed) > 200 && Math.hypot(p.car.x - ped.x, p.car.y - ped.y) < 130) threat = p.car;
-      if (threat) ped.fleeT = 1.2;
+      if (threat) { ped.fleeT = 1.2; ped.fleeX = threat.x; ped.fleeY = threat.y; }
       var spd = 42;
       if (ped.fleeT > 0) {
         ped.fleeT -= dt; spd = 165;
-        ped.angle = Math.atan2(ped.y - threat.y, ped.x - threat.x);
+        // Flee from the REMEMBERED threat position: the threat itself
+        // is only re-detected on frames where it is still close.
+        ped.angle = Math.atan2(ped.y - (ped.fleeY || 0), ped.x - (ped.fleeX || 0));
       } else if (ped.walkT <= 0) {
         ped.walkT = 2 + Math.random() * 4;
         ped.angle = Math.floor(Math.random() * 4) * (Math.PI / 2) + (Math.random() - 0.5) * 0.4;

@@ -295,9 +295,8 @@
     drawPlazas(ctx, G, cam);
     drawPierAndShop(ctx, G, cam);
     drawBuildings(ctx, G, cam);
-    // Roadblock cruisers.
-    G.roadblocks.forEach(function (car) { drawCarShape(ctx, car, cam, G); });
-    // Parked + traffic + player cars, then police on top.
+    // All cars (parked, traffic, the player's, roadblocks), then
+    // the pursuit cruisers on top.
     G.cars.forEach(function (car) { drawCarShape(ctx, car, cam, G); });
     G.police.forEach(function (c) { drawCarShape(ctx, c.car, cam, G); });
     G.peds.forEach(function (ped) { drawPerson(ctx, ped, cam, G, false); });

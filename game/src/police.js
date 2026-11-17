@@ -145,7 +145,15 @@
   }
   function updateRoadblocks(G, dt) {
     var want = G.wanted >= 4 ? 2 : 0;
-    if (G.roadblocks.length > want) G.roadblocks.splice(want);
+    if (G.roadblocks.length > want) {
+      // Roadblocks live in G.cars too (so they collide and can be
+      // shot or stolen); removing one must remove it from both lists.
+      var removed = G.roadblocks.splice(want);
+      removed.forEach(function (car) {
+        var ix = G.cars.indexOf(car);
+        if (ix >= 0 && G.player.car !== car) G.cars.splice(ix, 1);
+      });
+    }
     if (G.roadblocks.length < want && Math.random() < dt * 0.5) {
       var p = G.player;
       var rx = CFG.ROADS_X[Math.floor(Math.random() * CFG.ROADS_X.length)];
@@ -155,6 +163,7 @@
         var c2 = CB.makeCar(rx + 24, by + 8, Math.PI / 2, CFG.PALETTE.police, 'police');
         c1.parked = true; c2.parked = true;
         G.roadblocks.push(c1, c2);
+        G.cars.push(c1, c2);
       }
     }
   }
